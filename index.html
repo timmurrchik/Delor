@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delor — Ultimate Fix</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        :root { --bg: #0f0f0f; --accent: #00d4ff; --text: #e0e0e0; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
+
+        .toolbar { background: #151515; padding: 10px 20px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--accent); align-items: center; }
+        .logo { font-size: 20px; font-weight: bold; color: var(--accent); letter-spacing: 2px; }
+        
+        /* КНОПКИ-КРАСАВЧИКИ */
+        button { 
+            background: transparent; border: 1px solid var(--accent); color: var(--accent); 
+            padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        button:hover { background: var(--accent); color: #000; }
+
+        .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .panel-code { width: 50%; display: flex; flex-direction: column; position: relative; background: #050505; }
+        .panel-view { flex: 1; background: white; }
+        
+        @media (max-width: 768px) {
+            .panel-code { width: 100%; }
+            .panel-view { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; }
+        }
+
+        /* ФИКС КУРСОРА: делаем текстовую область полностью прозрачной, чтобы курсор был строго поверх кода */
+        .editor-wrapper { flex: 1; position: relative; overflow: hidden; }
+        #in, #out {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; 
+            padding: 20px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 16px; 
+            line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; overflow: auto;
+        }
+        #in { background: transparent; color: transparent; caret-color: var(--accent); z-index: 2; border: none; outline: none; }
+        #out { z-index: 1; pointer-events: none; background: #050505; }
+        
+        #save-dot { position: absolute; top: 10px; right: 20px; width: 10px; height: 10px; border-radius: 50%; background: #444; transition: 0.5s; z-index: 20; }
+        #save-dot.active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="logo">DELOR</div>
+        <div>
+            <button id="view-btn" onclick="mobileSwitch()">VIEW</button>
+            <button onclick="download()">SAVE</button>
+        </div>
+    </div>
+    <div class="main">
+        <div class="panel-code" id="left">
+            <div id="save-dot"></div>
+            <div class="editor-wrapper">
+                <textarea id="in" spellcheck="false"></textarea>
+                <pre id="out"><code id="code-display"></code></pre>
+            </div>
+        </div>
+        <div class="panel-view" id="right">
+            <iframe id="view"></iframe>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script>
+        const input = document.getElementById('in');
+        const display = document.getElementById('code-display');
+        const view = document.getElementById('view');
+        const dot = document.getElementById('save-dot');
+        const right = document.getElementById('right');
+
+        function refresh() {
+            display.textContent = input.value;
+            Prism.highlightElement(display);
+            view.srcdoc = input.value;
+            localStorage.setItem('delor_data', input.value);
+            dot.classList.add('active');
+            setTimeout(() => dot.classList.remove('active'), 500);
+        }
+
+        function mobileSwitch() {
+            right.style.display = (right.style.display === 'block') ? 'none' : 'block';
+        }
+
+        input.oninput = refresh;
+        window.onload = () => { input.value = localStorage.getItem('delor_data') || "<h1>Delor Pro</h1>"; refresh(); };
+        
+        // Надежное скачивание
+        async function download() {
+            const blob = new Blob([input.value], { type: 'text/html' });
+            if ('showSaveFilePicker' in window) {
+                const handle = await window.showSaveFilePicker({ suggestedName: 'delor.html' });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } else {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'delor.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        }
+    </script>
+</body>
+</html>
